@@ -1,7 +1,7 @@
 goradius
 ========
 
-[![Build Status](https://travis-ci.org/kirves/godijkstra.png?branch=master)](https://travis-ci.org/kirves/godijkstra)
+[![Build Status](https://travis-ci.org/kirves/goradius.png?branch=master)](https://travis-ci.org/kirves/goradius)
 
 Description
 -----------
