@@ -46,4 +46,4 @@ And try to authenticate a user:
 License
 -------------
 
-`goradius` is released under the MIT license. See [LICENSE.md](https://github.com/kirves/goradius/LICENSE.md).
+`goradius` is released under the MIT license. See [LICENSE](https://github.com/kirves/goradius/LICENSE).
