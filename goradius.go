@@ -147,12 +147,14 @@ func (a *AuthenticatorT) createRequest(auth, uname, encpass []byte) []byte {
 }
 
 func (a *AuthenticatorT) parseResponse(resp []byte, auth []byte) (bool, error) {
-	// TODO: check this
-	// checkauth := resp[4:20]
-	// m := md5.Sum(bytes.Join([][]byte{resp[0:4], auth, resp[20:], a.secret}, nil))
-	// if bytes.Compare(checkauth, m[:]) != 0 {
-	// 	return false, errors.New("Forged or corrupted answer")
-	// }
+	// ignore everything after the specified length
+	l := binary.BigEndian.Uint16(resp[2:4])
+
+	checkauth := resp[4:20]
+	m := md5.Sum(bytes.Join([][]byte{resp[0:4], auth, resp[20:l], a.secret}, nil))
+	if bytes.Compare(checkauth, m[:]) != 0 {
+		return false, errors.New("Forged or corrupted answer")
+	}
 	if int64(resp[0]) == ACCESS_ACCEPT {
 		return true, nil
 	} else {
