@@ -1,4 +1,4 @@
-package goradius
+package radius
 
 import (
 	"encoding/binary"
@@ -14,14 +14,14 @@ var (
 )
 
 func TestConnection(t *testing.T) {
-	auth := Authenticator(server, port, secret)
+	auth := New(server, port, secret)
 	if auth == nil {
 		t.Fatal("Could not create authenticator object.")
 	}
 }
 
-func TestAuthenticator(t *testing.T) {
-	auth := Authenticator(server, port, secret)
+func TestNew(t *testing.T) {
+	auth := New(server, port, secret)
 	v := auth.generateAuthenticator()
 	if binary.Size(v) != 16 {
 		t.Fatal("Wrong size for authenticator")
@@ -36,19 +36,19 @@ func TestAuthenticator(t *testing.T) {
 }
 
 func TestRadcrypt(t *testing.T) {
-	auth := Authenticator(server, port, secret)
+	auth := New(server, port, secret)
 	v := auth.generateAuthenticator()
 	data, err := auth.radcrypt(v, []byte(password))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if binary.Size(data) != 16 {
-		t.Fatal("Wrong size for data")
+	if len(data) != 16 {
+		t.Fatalf("Wrong size for data: %d", len(data))
 	}
 }
 
 func TestAuth(t *testing.T) {
-	auth := Authenticator(server, port, secret)
+	auth := New(server, port, secret)
 	res, err := auth.Authenticate(user, password)
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestAuth(t *testing.T) {
 }
 
 // func TestPacketCreation(t *testing.T) {
-// 	auth := Authenticator(server, port, secret)
+// 	auth := New(server, port, secret)
 // 	v := auth.generateAuthenticator()
 // 	encpass, _ := auth.radcrypt(v, []byte(password))
 // 	pkg := auth.createRequest(v, []byte(user), encpass)
