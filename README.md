@@ -29,9 +29,9 @@ After that, simply run:
 Example
 -------
 
-To authenticate a user simply create a new `AuthenticatorT` object using server information and the secret associated to your client
+To authenticate a user simply create a new `Authenticator` object using server information and the secret associated to your client
 
-	auth := goradius.Authenticator(server_url, server_port, secret)
+	auth := radius.New(server_url, server_port, secret)
 
 And try to authenticate a user:
 
