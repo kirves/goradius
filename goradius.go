@@ -1,4 +1,4 @@
-// GoRadius package implements basic Radius client capabilities, allowing Go code ti authenticate against a Radius server.
+// Package goradius implements basic Radius client capabilities, allowing Go code ti authenticate against a Radius server.
 // It is based on https://github.com/btimby/py-radius Python package
 package goradius
 
@@ -15,32 +15,43 @@ import (
 )
 
 const (
-	RETRIES = 3 // Number of login retries
+	// RETRIES is the number of login retries
+	RETRIES = 3
 )
 
 const (
-	ACCESS_REQUEST = iota + 1 // id for access request packets
-	ACCESS_ACCEPT             // id for access accept packets
-	ACCESS_REJECT             // id for access reject packets
+	// AccessRequest packet id
+	AccessRequest = iota + 1
+	// AccessAccept packet id
+	AccessAccept
+	// AccessReject packet id
+	AccessReject
 )
 
-// The Authenticator object implements the Authenticate method to check whether a user can authenticate against the provided server
+// The AuthenticatorT object implements the Authenticate method to check whether a user can authenticate against the provided server
 type AuthenticatorT struct {
-	server string
-	port   string
-	secret []byte
+	server  string
+	port    string
+	secret  []byte
+	timeout time.Duration
 }
 
-// This method returns a new AuthenticatorT object, providing the server url and port and the secret
+// Authenticator method returns a new AuthenticatorT object, providing the server url and port and the secret
 // associated to the client (registered on the server).
 func Authenticator(server, port, secret string) *AuthenticatorT {
-	return &AuthenticatorT{server, port, []byte(secret)}
+	return &AuthenticatorT{server, port, []byte(secret), 10 * time.Second}
+}
+
+// AuthenticatorWithTimeout method returns a new AuthenticatorT object, providing the server url, the port, the secret
+// and a timeout associated to the client (registered on the server).
+func AuthenticatorWithTimeout(server, port, secret string, timeout time.Duration) *AuthenticatorT {
+	return &AuthenticatorT{server, port, []byte(secret), timeout * time.Second}
 }
 
 // Authenticate authenticates a user against the Radius server and returns true whether the user provided the correct password
 func (a *AuthenticatorT) Authenticate(username, password string) (bool, error) {
 	url := fmt.Sprintf("%s:%s", a.server, a.port)
-	conn, err := net.DialTimeout("udp", url, 10*time.Second)
+	conn, err := net.DialTimeout("udp", url, a.timeout*time.Second)
 	if err != nil {
 		return false, err
 	}
@@ -56,7 +67,7 @@ func (a *AuthenticatorT) Authenticate(username, password string) (bool, error) {
 
 	for i := 0; i < RETRIES; i++ {
 		conn.Write(msg)
-		var resp []byte = make([]byte, 512)
+		var resp = make([]byte, 512)
 		ch := make(chan int, 0)
 		eCh := make(chan error, 0)
 		go func(ch chan int, eCh chan error) {
@@ -99,7 +110,7 @@ func (a *AuthenticatorT) radcrypt(auth, passwd []byte) ([]byte, error) {
 		return nil, errors.New("Password exceeds maximum of 128 bytes")
 	}
 
-	result := make([]byte, 0)
+	var result = make([]byte, 0)
 	last := make([]byte, len(auth))
 	copy(last, auth)
 	for len(text) > 0 {
@@ -117,7 +128,7 @@ func (a *AuthenticatorT) createRequest(auth, uname, encpass []byte) []byte {
 	buf := new(bytes.Buffer)
 	type requestHeader struct {
 		Type     int8
-		Id       int8
+		ID       int8
 		MsgLen   uint16
 		Auth     [16]byte
 		Type2    int8
@@ -130,7 +141,7 @@ func (a *AuthenticatorT) createRequest(auth, uname, encpass []byte) []byte {
 	}
 
 	req := requestHeader{
-		ACCESS_REQUEST,
+		AccessRequest,
 		int8(rand.Int() % 256),
 		uint16(len(uname) + len(encpass) + 24),
 		tmpAuth,
@@ -155,9 +166,8 @@ func (a *AuthenticatorT) parseResponse(resp []byte, auth []byte) (bool, error) {
 	if bytes.Compare(checkauth, m[:]) != 0 {
 		return false, errors.New("Forged or corrupted answer")
 	}
-	if int64(resp[0]) == ACCESS_ACCEPT {
+	if int64(resp[0]) == AccessAccept {
 		return true, nil
-	} else {
-		return false, nil
 	}
+	return false, nil
 }
