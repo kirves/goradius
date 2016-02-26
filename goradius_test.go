@@ -3,14 +3,17 @@ package goradius
 import (
 	"encoding/binary"
 	"testing"
+	"time"
 )
 
 var (
 	server   string = ""
 	port     string = "1812"
 	secret   string = ""
+	timeout  time.Duration = 5
 	user     string = ""
 	password string = ""
+	nasId    string = ""
 )
 
 func TestConnection(t *testing.T) {
@@ -48,8 +51,8 @@ func TestRadcrypt(t *testing.T) {
 }
 
 func TestAuth(t *testing.T) {
-	auth := Authenticator(server, port, secret)
-	res, err := auth.Authenticate(user, password)
+	auth := AuthenticatorWithTimeout(server, port, secret, timeout)
+	res, err := auth.Authenticate(user, password, nasId)
 	if err != nil {
 		t.Fatal(err)
 	}
