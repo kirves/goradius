@@ -49,7 +49,8 @@ func AuthenticatorWithTimeout(server, port, secret string, timeout time.Duration
 }
 
 // Authenticate authenticates a user against the Radius server and returns true whether the user provided the correct password
-func (a *AuthenticatorT) Authenticate(username, password string) (bool, error) {
+// If nasId is empty this attribute won't be included in request.
+func (a *AuthenticatorT) Authenticate(username, password, nasId string) (bool, error) {
 	url := fmt.Sprintf("%s:%s", a.server, a.port)
 	conn, err := net.DialTimeout("udp", url, a.timeout*time.Second)
 	if err != nil {
@@ -63,7 +64,7 @@ func (a *AuthenticatorT) Authenticate(username, password string) (bool, error) {
 		return false, err
 	}
 
-	msg := a.createRequest(auth, []byte(username), encpass)
+	msg := a.createRequest(auth, []byte(username), encpass, []byte(nasId))
 
 	for i := 0; i < RETRIES; i++ {
 		conn.Write(msg)
@@ -124,7 +125,7 @@ func (a *AuthenticatorT) radcrypt(auth, passwd []byte) ([]byte, error) {
 	return result, nil
 }
 
-func (a *AuthenticatorT) createRequest(auth, uname, encpass []byte) []byte {
+func (a *AuthenticatorT) createRequest(auth, uname, encpass, nasId []byte) []byte {
 	buf := new(bytes.Buffer)
 	type requestHeader struct {
 		Type     int8
@@ -140,10 +141,17 @@ func (a *AuthenticatorT) createRequest(auth, uname, encpass []byte) []byte {
 		tmpAuth[i] = auth[i]
 	}
 
+	var nasIdInHeader int
+	if len(nasId) > 0 {
+		nasIdInHeader = len(nasId) + 2
+	} else {
+		nasIdInHeader = 0
+	}
+
 	req := requestHeader{
 		AccessRequest,
 		int8(rand.Int() % 256),
-		uint16(len(uname) + len(encpass) + 24),
+		uint16(len(uname) + len(encpass) + nasIdInHeader + 24),
 		tmpAuth,
 		1,
 		int8(len(uname) + 2),
@@ -154,6 +162,11 @@ func (a *AuthenticatorT) createRequest(auth, uname, encpass []byte) []byte {
 	binary.Write(buf, binary.BigEndian, int8(2))
 	binary.Write(buf, binary.BigEndian, int8(len(encpass)+2))
 	buf.Write(encpass)
+	if len(nasId) > 0 {
+		binary.Write(buf, binary.BigEndian, int8(32))
+		binary.Write(buf, binary.BigEndian, int8(len(nasId)+2))
+		buf.Write(nasId)
+	}
 	return buf.Bytes()
 }
 

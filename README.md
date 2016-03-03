@@ -7,7 +7,7 @@ goradius
 Description
 -----------
 
-`goradius` package implements basic Radius client capabilities, allowing Go code ti authenticate against a Radius server.
+`goradius` package implements basic Radius client capabilities, allowing Go code to authenticate against a Radius server.
 It is based on https://github.com/btimby/py-radius python package
 
 Installation
@@ -35,7 +35,7 @@ To authenticate a user simply create a new `AuthenticatorT` object using server 
 
 And try to authenticate a user:
 
-	ok, err := auth.Authenticate(username, password)
+	ok, err := auth.Authenticate(username, password, nasId)
 	if err != nil {
 		panic(err)
 	}
