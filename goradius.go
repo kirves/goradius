@@ -52,7 +52,7 @@ func AuthenticatorWithTimeout(server, port, secret string, timeout time.Duration
 // If nasId is empty this attribute won't be included in request.
 func (a *AuthenticatorT) Authenticate(username, password, nasId string) (bool, error) {
 	url := fmt.Sprintf("%s:%s", a.server, a.port)
-	conn, err := net.DialTimeout("udp", url, a.timeout*time.Second)
+	conn, err := net.DialTimeout("udp", url, a.timeout)
 	if err != nil {
 		return false, err
 	}
