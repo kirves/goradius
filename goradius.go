@@ -1,4 +1,4 @@
-// Package goradius implements basic Radius client capabilities, allowing Go code ti authenticate against a Radius server.
+// Package goradius implements basic Radius client capabilities, allowing Go code to authenticate against a Radius server.
 // It is based on https://github.com/btimby/py-radius Python package
 package goradius
 
@@ -17,6 +17,8 @@ import (
 const (
 	// RETRIES is the number of login retries
 	RETRIES = 3
+	// responseTimeout is the number of seconds to wait for a response after a request is sent
+	responseTimeout = 5
 )
 
 const (
@@ -64,13 +66,13 @@ func (a *AuthenticatorT) Authenticate(username, password, nasId string) (bool, e
 		return false, err
 	}
 
-	msg := a.createRequest(auth, []byte(username), encpass, []byte(nasId))
+	req := a.createRequest(auth, []byte(username), encpass, []byte(nasId))
 
 	for i := 0; i < RETRIES; i++ {
-		conn.Write(msg)
+		conn.Write(req)
 		var resp = make([]byte, 512)
-		ch := make(chan int, 0)
-		eCh := make(chan error, 0)
+		ch := make(chan int, 1)
+		eCh := make(chan error, 1)
 		go func(ch chan int, eCh chan error) {
 			_, err := conn.Read(resp)
 			if err != nil {
@@ -78,18 +80,17 @@ func (a *AuthenticatorT) Authenticate(username, password, nasId string) (bool, e
 			} else {
 				ch <- 1
 			}
-
 		}(ch, eCh)
+
 		select {
 		case <-ch:
 			return a.parseResponse(resp, auth)
 		case err := <-eCh:
 			return false, err
-		case <-time.After(10 * time.Second):
-			return false, errors.New("Timed out while waiting for an answer")
+		case <-time.After(responseTimeout * time.Second):
 		}
 	}
-	return false, nil
+	return false, fmt.Errorf("Error: Server is not responding: waited %d times %ds for an answer", RETRIES, responseTimeout)
 }
 
 func (a *AuthenticatorT) generateAuthenticator() []byte {
