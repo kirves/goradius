@@ -15,19 +15,15 @@ import (
 )
 
 const (
-	// RETRIES is the number of login retries
-	RETRIES = 3
-	// responseTimeout is the number of seconds to wait for a response after a request is sent
-	responseTimeout = 5
-)
-
-const (
 	// AccessRequest packet id
 	AccessRequest = iota + 1
 	// AccessAccept packet id
 	AccessAccept
 	// AccessReject packet id
 	AccessReject
+
+	// RETRIES is the number of login retries
+	RETRIES = 3
 )
 
 // The AuthenticatorT object implements the Authenticate method to check whether a user can authenticate against the provided server
@@ -47,12 +43,12 @@ func Authenticator(server, port, secret string) *AuthenticatorT {
 // AuthenticatorWithTimeout method returns a new AuthenticatorT object, providing the server url, the port, the secret
 // and a timeout associated to the client (registered on the server).
 func AuthenticatorWithTimeout(server, port, secret string, timeout time.Duration) *AuthenticatorT {
-	return &AuthenticatorT{server, port, []byte(secret), timeout * time.Second}
+	return &AuthenticatorT{server, port, []byte(secret), timeout}
 }
 
 // Authenticate authenticates a user against the Radius server and returns true whether the user provided the correct password
 // If nasId is empty this attribute won't be included in request.
-func (a *AuthenticatorT) Authenticate(username, password, nasId string) (bool, error) {
+func (a *AuthenticatorT) Authenticate(username, password, nasID string) (bool, error) {
 	url := fmt.Sprintf("%s:%s", a.server, a.port)
 	conn, err := net.DialTimeout("udp", url, a.timeout)
 	if err != nil {
@@ -66,7 +62,7 @@ func (a *AuthenticatorT) Authenticate(username, password, nasId string) (bool, e
 		return false, err
 	}
 
-	req := a.createRequest(auth, []byte(username), encpass, []byte(nasId))
+	req := a.createRequest(auth, []byte(username), encpass, []byte(nasID))
 
 	for i := 0; i < RETRIES; i++ {
 		conn.Write(req)
@@ -87,10 +83,10 @@ func (a *AuthenticatorT) Authenticate(username, password, nasId string) (bool, e
 			return a.parseResponse(resp, auth)
 		case err := <-eCh:
 			return false, err
-		case <-time.After(responseTimeout * time.Second):
+		case <-time.After(a.timeout * time.Second):
 		}
 	}
-	return false, fmt.Errorf("Error: Server is not responding: waited %d times %ds for an answer", RETRIES, responseTimeout)
+	return false, fmt.Errorf("Error: Server is not responding: waited %d times %ds for an answer", RETRIES, a.timeout)
 }
 
 func (a *AuthenticatorT) generateAuthenticator() []byte {
