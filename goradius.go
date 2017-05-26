@@ -83,10 +83,10 @@ func (a *AuthenticatorT) Authenticate(username, password, nasID string) (bool, e
 			return a.parseResponse(resp, auth)
 		case err := <-eCh:
 			return false, err
-		case <-time.After(a.timeout * time.Second):
+		case <-time.After(a.timeout):
 		}
 	}
-	return false, fmt.Errorf("Error: Server is not responding: waited %d times %ds for an answer", RETRIES, a.timeout)
+	return false, fmt.Errorf("Error: Server is not responding: waited %d times %v for an answer", RETRIES, a.timeout)
 }
 
 func (a *AuthenticatorT) generateAuthenticator() []byte {
