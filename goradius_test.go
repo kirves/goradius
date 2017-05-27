@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"testing"
 	"time"
+	"net"
+	"strings"
 )
 
 var (
@@ -67,3 +69,40 @@ func TestAuth(t *testing.T) {
 // 	encpass, _ := auth.radcrypt(v, []byte(password))
 // 	pkg := auth.createRequest(v, []byte(user), encpass)
 // }
+
+func TestDialTimeout(t *testing.T) {
+	// create a UDP server that will cause a connection timeout
+	timeoutHost := "127.0.0.1"
+	udpConn, err := net.ListenUDP("udp", nil)
+	if err != nil {
+		t.Fatal("Failed to open UDP server: %v", err)
+	}
+	defer func() {
+		// ignore close errors
+		udpConn.Close()
+	}()
+	connParts := strings.Split(udpConn.LocalAddr().String(), ":")
+	timeoutPort := connParts[len(connParts) - 1]
+
+	// set up the authenticator
+	auth := AuthenticatorWithTimeout(timeoutHost, timeoutPort, secret, timeout * time.Second)
+
+	// get the test start time
+	startTime := time.Now()
+
+	// execute the timeout test
+	_, err = auth.Authenticate(user, password, nasId)
+
+	// assert the test case passed
+	if err == nil {
+		t.Fatal("Failed to get the timeout error message")
+	}
+	expected := "Error: Server is not responding: waited 3 times 5s for an answer"
+	if err.Error() != expected {
+		t.Fatalf("Expected to get error message '%s', got '%s'", expected, err.Error())
+	}
+	execDuration := time.Now().Sub(startTime)
+	if int(execDuration.Seconds()) < 14 {
+		t.Fatalf("Failed to retry for expected duration; wanted at least 14 seconds, got %v", execDuration)
+	}
+}
